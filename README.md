@@ -1,5 +1,7 @@
-需要在Content/Config创建ReadCamera.json和SaveCamera.json文件  ReadCamera.json的格式参考如下
+## 需要在Content/Config创建ReadCamera.json和SaveCamera.json文件  
 
+## ReadCamera.json的格式参考如下
+```
 [
 	{
 		"Name": "主页",
@@ -24,3 +26,4 @@
 		"SpringArmLength": 9338.287109375
 	}
 ]
+```
