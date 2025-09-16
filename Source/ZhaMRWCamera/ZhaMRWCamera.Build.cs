@@ -34,10 +34,13 @@ public class ZhaMRWCamera : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				"Core",
 				"CoreUObject",
 				"Engine",
-				"Slate",
-				"SlateCore",
+				"InputCore",
+				"Json",
+				"JsonUtilities"
+				
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
