@@ -1,0 +1,9 @@
+# Ignore Unreal auto-generated folders
+Binaries/
+Intermediate/
+Saved/
+.vscode/
+.idea/
+*.sln
+*.VC.db
+DerivedDataCache/
