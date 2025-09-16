@@ -39,8 +39,8 @@ public class ZhaMRWCamera : ModuleRules
 				"Engine",
 				"InputCore",
 				"Json",
-				"JsonUtilities"
-				
+				"JsonUtilities",
+				"ImageWrapper" 
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

@@ -51,4 +51,14 @@ public:
 		const FString& SaveFilePath = TEXT(""),
 		const FString& ReadFilePath = TEXT("")
 	);
+
+	UFUNCTION(BlueprintCallable, Category="ZhamRWCamera")
+	static bool CaptureTempScreenshot(const FString& ShotDir = TEXT("Config/Shot/"));
+
+	UFUNCTION(BlueprintCallable, Category="ZhamRWCamera")
+	static bool RenameScreenshot(const FString& NewName, const FString& ShotDir = TEXT("Config/Shot/"));
+
+	UFUNCTION(BlueprintCallable, Category="ZhamRWCamera")
+	static UTexture2D* LoadScreenshotToTexture(const FString& Name, const FString& ShotDir = TEXT("Config/Shot/"));
+
 };

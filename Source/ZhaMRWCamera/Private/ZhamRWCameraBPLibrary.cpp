@@ -1,6 +1,8 @@
 ﻿#include "ZhamRWCameraBPLibrary.h"
 
 #include "HighResScreenshot.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -14,6 +16,7 @@ void UZhamRWCameraBPLibrary::SaveCurrentPawnJson(const UObject* WorldContextObje
 {
     if (!WorldContextObject) return;
 
+    
     UWorld* World = WorldContextObject->GetWorld();
     if (!World) return;
 
@@ -69,7 +72,7 @@ void UZhamRWCameraBPLibrary::SaveCurrentPawnJson(const UObject* WorldContextObje
     {
         UE_LOG(LogTemp, Warning, TEXT("Failed to save Pawn JSON"));
     }
-
+/*
     // --- 截图 ---
     FString ShotDir = FPaths::ProjectContentDir() / TEXT("Config/Shot/");
     IFileManager::Get().MakeDirectory(*ShotDir, true);
@@ -84,6 +87,7 @@ void UZhamRWCameraBPLibrary::SaveCurrentPawnJson(const UObject* WorldContextObje
         GEngine->GameViewport->Viewport->TakeHighResScreenShot();
         UE_LOG(LogTemp, Log, TEXT("Screenshot saved to: %s"), *ShotFile);
     }
+    */
 }
 
 TArray<FPawnJsonData> UZhamRWCameraBPLibrary::LoadPawnJsonArray(const FString& FilePath)
@@ -226,4 +230,89 @@ void UZhamRWCameraBPLibrary::ReplaceWithSaveFirstByName(
     {
         UE_LOG(LogTemp, Warning, TEXT("Failed to save updated ReadCamera.json: %s"), *ReadPath);
     }
+}
+// 1. 截图保存为 Temp.png
+bool UZhamRWCameraBPLibrary::CaptureTempScreenshot(const FString& ShotDir)
+{
+    FString Dir = FPaths::ProjectContentDir() / ShotDir;
+    IFileManager::Get().MakeDirectory(*Dir, true);
+
+    FString ShotFile = Dir / TEXT("Temp") + TEXT(".png");
+
+    if (GEngine && GEngine->GameViewport)
+    {
+        FHighResScreenshotConfig& HighResConfig = GetHighResScreenshotConfig();
+        HighResConfig.SetResolution(1280, 720, 1.0f); // 720p
+        HighResConfig.SetFilename(ShotFile);
+        GEngine->GameViewport->Viewport->TakeHighResScreenShot();
+        UE_LOG(LogTemp, Log, TEXT("Screenshot saved to: %s"), *ShotFile);
+    }
+    return true;
+}
+
+// 2. 将 Temp.png 重命名为指定名字
+bool UZhamRWCameraBPLibrary::RenameScreenshot(const FString& NewName, const FString& ShotDir)
+{
+    FString FullShotDir = FPaths::ProjectContentDir() / ShotDir;
+    FString TempPath = FullShotDir / TEXT("Temp.png");
+    FString NewPath  = FullShotDir / (NewName + TEXT(".png"));
+
+    if (!FPaths::FileExists(TempPath))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Temp.png not found at: %s"), *TempPath);
+        return false;
+    }
+
+    if (IFileManager::Get().Move(*NewPath, *TempPath, true, true))
+    {
+        UE_LOG(LogTemp, Log, TEXT("Screenshot renamed: %s"), *NewPath);
+        return true;
+    }
+
+    return false;
+}
+
+// 3. 根据名字加载截图为 UTexture2D
+UTexture2D* UZhamRWCameraBPLibrary::LoadScreenshotToTexture(const FString& Name, const FString& ShotDir)
+{
+    FString FullShotDir = FPaths::ProjectContentDir() / ShotDir;
+    FString ImagePath = FullShotDir / (Name + TEXT(".png"));
+
+    if (!FPaths::FileExists(ImagePath))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Screenshot not found: %s"), *ImagePath);
+        return nullptr;
+    }
+
+    // 读取文件
+    TArray<uint8> RawFileData;
+    if (!FFileHelper::LoadFileToArray(RawFileData, *ImagePath)) return nullptr;
+
+    // 使用 ImageWrapper 解码 PNG
+    IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+    TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+
+    if (ImageWrapper.IsValid() && ImageWrapper->SetCompressed(RawFileData.GetData(), RawFileData.Num()))
+    {
+        const TArray<uint8>* RawData = nullptr;
+        TArray<uint8> UncompressedBGRA;
+        if (ImageWrapper->GetRaw(ERGBFormat::BGRA, 8, UncompressedBGRA))
+        {
+            UTexture2D* Texture = UTexture2D::CreateTransient(
+                ImageWrapper->GetWidth(),
+                ImageWrapper->GetHeight(),
+                PF_B8G8R8A8);
+
+            if (!Texture) return nullptr;
+
+            void* TextureData = Texture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
+            FMemory::Memcpy(TextureData, UncompressedBGRA.GetData(), UncompressedBGRA.Num());
+            Texture->GetPlatformData()->Mips[0].BulkData.Unlock();
+
+            Texture->UpdateResource();
+            return Texture;
+        }
+    }
+
+    return nullptr;
 }
