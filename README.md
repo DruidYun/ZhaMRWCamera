@@ -1,5 +1,5 @@
 ## 需要在Content/Config创建ReadCamera.json和SaveCamera.json文件  
-
+！！ 现在的打包开发版后不能替换数据
 ## ReadCamera.json的格式参考如下
 ```
 [
